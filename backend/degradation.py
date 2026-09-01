@@ -1,13 +1,14 @@
 from typing import Type, TypeVar, Any, Optional
 from pydantic import BaseModel
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_anthropic import ChatAnthropic
 from backend.models import AgentResult
 import traceback
 
 T = TypeVar('T', bound=BaseModel)
 
-# Ensure to set GOOGLE_API_KEY environment variable
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0)
+# Ensure to set ANTHROPIC_API_KEY environment variable
+# Claude 3.5 Sonnet is highly capable of structured outputs
+llm = ChatAnthropic(model="claude-3-5-sonnet-latest", temperature=0)
 
 def call_agent_with_degradation(
     prompt_text: str,
