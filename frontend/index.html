@@ -34,7 +34,13 @@
         .fallback-box { background: #333; color: white; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 5px solid #fbbc04; }
         .fallback-box h4 { margin: 0 0 10px 0; color: #fbbc04; }
         
-        #loading { display: none; text-align: center; margin-top: 20px; font-weight: bold; color: #0066cc; }
+        #progressContainer { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-top: 15px; display: none; }
+        #progressBar { width: 0%; height: 10px; background-color: #0066cc; border-radius: 4px; transition: width 0.3s; }
+        #progressText { text-align: center; font-size: 0.85rem; margin-top: 5px; color: #666; }
+        
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .agent-node.working { border-color: #0066cc; background-color: #e6f0ff; animation: pulse 1.5s infinite; }
+        .badge.working { background: #0066cc; color: white; }
     </style>
 </head>
 <body>
@@ -47,7 +53,10 @@
         <h2>1. Design Brief</h2>
         <textarea id="briefInput" placeholder="Paste your raw design brief here... e.g. 'We need to build a new mobile app for dog walkers...'"></textarea>
         <button id="submitBtn">Generate UX POC</button>
-        <div id="loading">Agents are working...</div>
+        <div id="progressContainer">
+            <div id="progressBar"></div>
+            <div id="progressText">0% Complete</div>
+        </div>
     </div>
 
     <!-- PIPELINE VISUALIZATION -->
