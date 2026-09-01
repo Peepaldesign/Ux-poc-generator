@@ -1,5 +1,5 @@
 from typing import List, Optional, Literal, Union, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Field
 
 # -------------------------------------------------------------------
 # ORCHESTRATOR
@@ -16,6 +16,7 @@ class Signals(BaseModel):
     action_verbs: List[str] = Field(default_factory=list)
 
 class OrchestratorOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     signals: Signals
     existence: Literal["greenfield", "brownfield"]
     objective: Literal["create", "extend", "transform", "improve", "grow", "foundation"]
@@ -30,6 +31,7 @@ class OrchestratorOutput(BaseModel):
 # AGENT 01: Brief Framing
 # -------------------------------------------------------------------
 class A01BriefFramingOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     problem_statement: str
     assumptions: List[str]
     constraints: List[str]
@@ -52,6 +54,7 @@ class StakeholderMapItem(BaseModel):
     assumption: bool
 
 class A02BusinessGoalsOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     goal_hierarchy: List[GoalHierarchyItem]
     success_definition: str
     stakeholder_map: List[StakeholderMapItem]
@@ -76,6 +79,7 @@ class KeyPlayerItem(BaseModel):
     why_relevant: str
 
 class A03DomainMarketResearchOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     market_overview: str
     trends: List[TrendItem]
     regulatory: List[RegulatoryItem]
@@ -106,6 +110,7 @@ class GapItem(BaseModel):
     opportunity_size: Literal["high", "med", "low"]
 
 class A04CompetitiveAnalysisOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     feature_matrix: List[FeatureMatrixItem]
     pattern_inventory: List[PatternInventoryItem]
     teardown_notes: List[TeardownNotesItem]
@@ -122,6 +127,7 @@ class PainThemeItem(BaseModel):
     representative_signal: str
 
 class A05SecondaryUserResearchOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     pain_themes: List[PainThemeItem]
 
 # -------------------------------------------------------------------
@@ -140,6 +146,7 @@ class ClientAuditPlaceholder(BaseModel):
     instruction: str
 
 class A06UxAuditOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     competitor_issues: List[CompetitorIssueItem]
     client_audit: ClientAuditPlaceholder
 
@@ -163,6 +170,7 @@ class PersonaItem(BaseModel):
     provisional: bool
 
 class A07PersonaBuildingOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     personas: List[PersonaItem]
     status: str
     grounding: str
@@ -180,6 +188,7 @@ class JobItem(BaseModel):
     grounded_in: List[str]
 
 class A08JTBDOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     jobs: List[JobItem]
 
 # -------------------------------------------------------------------
@@ -200,6 +209,7 @@ class JourneyItem(BaseModel):
     stages: List[StageItem]
 
 class A09JourneyMappingOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     journeys: List[JourneyItem]
     status: str
     handoff_highest_friction_stage: str
@@ -225,6 +235,7 @@ class FlowItem(BaseModel):
     states: List[str]
 
 class A10KeyTaskFlowsOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     flows: List[FlowItem]
     handoff_implied_screens: List[str]
 
@@ -245,6 +256,7 @@ class ContentGroup(BaseModel):
     rationale: str
 
 class A11IAOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     sitemap: List[SitemapNode]
     nav_model: List[NavItem]
     content_groups: List[ContentGroup]
@@ -268,6 +280,7 @@ class BacklogItem(BaseModel):
     grounded_in: List[str]
 
 class A12FeaturePrioritizationOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     backlog: List[BacklogItem]
 
 # -------------------------------------------------------------------
@@ -281,6 +294,7 @@ class MetricItem(BaseModel):
     target: str
 
 class A13SuccessMatrixOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
     metrics_tree: List[MetricItem]
 
 # -------------------------------------------------------------------

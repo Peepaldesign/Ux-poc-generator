@@ -168,8 +168,19 @@ function showOutput(agentName, agentData) {
 
         // Show Payload if exists
         if (agentData.payload) {
+            if (agentData.payload.thinking_process) {
+                html += `<div style="background: #eef2f5; padding: 15px; border-radius: 4px; margin-bottom: 20px; border-left: 4px solid #0066cc;">`;
+                html += `<h4 style="margin-top:0; color: #0066cc;">Agent Thinking Process 🧠</h4>`;
+                html += `<p style="white-space: pre-wrap; font-size: 0.9rem; color: #444; margin-bottom: 0;">${agentData.payload.thinking_process}</p>`;
+                html += `</div>`;
+            }
+            
+            // Remove thinking_process from the displayed JSON so it's not duplicated
+            const displayPayload = { ...agentData.payload };
+            delete displayPayload.thinking_process;
+            
             html += `<p><strong>JSON Payload:</strong></p>`;
-            html += `<pre>${JSON.stringify(agentData.payload, null, 2)}</pre>`;
+            html += `<pre>${JSON.stringify(displayPayload, null, 2)}</pre>`;
         }
         
         // Show Error if degraded
