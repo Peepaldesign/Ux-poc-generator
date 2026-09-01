@@ -31,6 +31,9 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     document.getElementById('progressText').innerText = '0% Complete';
     document.getElementById('outputViewer').innerHTML = '<p>Click on an agent in the pipeline to view its output or fallback instructions.</p>';
     
+    // Clear previous state
+    alertedAgents.clear();
+    
     // Initialize pipeline UI to pending
     renderPipeline({}, false);
 
@@ -62,6 +65,7 @@ async function pollStatus() {
         
         latestState = data.state;
         renderPipeline(latestState, data.is_done);
+        checkDegradations(latestState);
 
         if (data.is_done) {
             clearInterval(pollInterval);
@@ -72,6 +76,23 @@ async function pollStatus() {
     } catch (err) {
         console.error('Polling error:', err);
     }
+}
+
+// Track which agents have already shown a popup
+const alertedAgents = new Set();
+
+function checkDegradations(state) {
+    AGENT_LIST.forEach(agent => {
+        const agentData = state[agent.key];
+        if (agentData && agentData.status === 'degraded' && !alertedAgents.has(agent.key)) {
+            alertedAgents.add(agent.key);
+            
+            // Show popup modal
+            const fallbackText = agentData.fallback_instruction || agentData.error_message || "Manual intervention required.";
+            document.getElementById('modalFallbackText').innerText = fallbackText;
+            document.getElementById('interventionModal').style.display = 'flex';
+        }
+    });
 }
 
 function renderPipeline(state, isDone) {

@@ -41,9 +41,29 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .agent-node.working { border-color: #0066cc; background-color: #e6f0ff; animation: pulse 1.5s infinite; }
         .badge.working { background: #0066cc; color: white; }
+
+        /* Modal Styles */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .modal { background: white; padding: 25px; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal h3 { margin-top: 0; color: #d93025; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal p { font-size: 0.95rem; line-height: 1.5; }
+        .modal .fallback-text { background: #fef7e0; padding: 15px; border-left: 4px solid #fbbc04; margin: 15px 0; font-weight: bold; }
+        .modal button { background: #333; margin-top: 15px; }
+        .modal button:hover { background: #000; }
     </style>
 </head>
 <body>
+
+<!-- Human Intervention Modal -->
+<div id="interventionModal" class="modal-overlay">
+    <div class="modal">
+        <h3>⚠️ Human Intervention Required</h3>
+        <p>An agent failed to complete its task (or the API rate limit was hit), triggering the <strong>Degradation Contract</strong>.</p>
+        <p>Please perform the following manual task before the downstream agents can proceed correctly:</p>
+        <div id="modalFallbackText" class="fallback-text"></div>
+        <button onclick="document.getElementById('interventionModal').style.display = 'none'">Acknowledge & Continue</button>
+    </div>
+</div>
 
 <h1>UX POC-Generation Pipeline</h1>
 
