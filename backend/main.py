@@ -71,6 +71,13 @@ async def get_status(job_id: str):
         "state": state.model_dump()
     }
 
+from fastapi.staticfiles import StaticFiles
+import os
+
+# Serve the frontend statically
+frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
