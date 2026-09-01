@@ -7,7 +7,7 @@ import traceback
 T = TypeVar('T', bound=BaseModel)
 
 # Ensure to set GOOGLE_API_KEY environment variable
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0)
+llm = ChatGoogleGenerativeAI(model="gemini-3.1-pro-preview", temperature=0)
 
 def call_agent_with_degradation(
     prompt_text: str,
