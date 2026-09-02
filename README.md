@@ -23,7 +23,7 @@ The system uses a 4+1 phase architecture powered by LangGraph:
 
 - `GOOGLE_API_KEY`: Your Gemini API key
 - `GEMINI_FLASH_MODEL`: (Default: gemini-3.6-flash) Model for complex reasoning phases
-- `GEMINI_LITE_MODEL`: (Default: gemini-2.0-flash-lite) Model for simpler classification phases
+- `GEMINI_LITE_MODEL`: (Default: gemini-3.5-flash-lite) Model for simpler classification phases
 - `WIREFRAME_MODEL`: (Default: gemini-3.6-flash) Model for generating wireframe layouts
 - `RPM_SLEEP_SECONDS`: (Default: 4) Sleep delay to prevent rate limiting
 - `MAX_WIREFRAME_SCREENS`: (Default: 5) Max number of screens generated in wireframe phase

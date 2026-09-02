@@ -14,7 +14,7 @@ RPM_SLEEP_SECONDS = int(os.getenv("RPM_SLEEP_SECONDS", "4"))
 
 def get_llm(tier: str):
     if tier == 'lite':
-        model_name = os.getenv("GEMINI_LITE_MODEL", "gemini-2.0-flash-lite")
+        model_name = os.getenv("GEMINI_LITE_MODEL", "gemini-3.5-flash-lite")
         return ChatGoogleGenerativeAI(model=model_name, temperature=0.2)
     elif tier == 'wireframe':
         flash_default = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.6-flash")

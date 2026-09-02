@@ -10,7 +10,7 @@ services:
       - key: GEMINI_FLASH_MODEL
         value: gemini-3.6-flash
       - key: GEMINI_LITE_MODEL
-        value: gemini-2.0-flash-lite
+        value: gemini-3.5-flash-lite
       - key: WIREFRAME_MODEL
         value: gemini-3.6-flash
       - key: RPM_SLEEP_SECONDS
