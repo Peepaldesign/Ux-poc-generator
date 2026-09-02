@@ -7,3 +7,13 @@ services:
     envVars:
       - key: GOOGLE_API_KEY
         sync: false
+      - key: GEMINI_FLASH_MODEL
+        value: gemini-3.6-flash
+      - key: GEMINI_LITE_MODEL
+        value: gemini-2.0-flash-lite
+      - key: WIREFRAME_MODEL
+        value: gemini-3.6-flash
+      - key: RPM_SLEEP_SECONDS
+        value: "4"
+      - key: MAX_WIREFRAME_SCREENS
+        value: "5"

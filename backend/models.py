@@ -1,5 +1,5 @@
-from typing import List, Optional, Literal, Union, Dict, Any
-from pydantic import BaseModel, Field, Field
+from typing import List, Optional, Literal, Union, Dict, Any, Generic, TypeVar
+from pydantic import BaseModel, Field
 
 # -------------------------------------------------------------------
 # ORCHESTRATOR
@@ -28,20 +28,7 @@ class OrchestratorOutput(BaseModel):
     rationale: str
 
 # -------------------------------------------------------------------
-# AGENT 01: Brief Framing
-# -------------------------------------------------------------------
-class A01BriefFramingOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    problem_statement: str
-    assumptions: List[str]
-    constraints: List[str]
-    unknowns: List[str]
-    open_questions: List[str]
-    handoff_scenario: str
-    handoff_sharpest_unknown: str
-
-# -------------------------------------------------------------------
-# AGENT 02: Business Goals
+# SUB-SCHEMAS
 # -------------------------------------------------------------------
 class GoalHierarchyItem(BaseModel):
     goal: str
@@ -53,17 +40,6 @@ class StakeholderMapItem(BaseModel):
     likely_interest: str
     assumption: bool
 
-class A02BusinessGoalsOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    goal_hierarchy: List[GoalHierarchyItem]
-    success_definition: str
-    stakeholder_map: List[StakeholderMapItem]
-    interview_guide: List[str]
-    handoff_top_business_goal: str
-
-# -------------------------------------------------------------------
-# AGENT 03: Domain/Market Research
-# -------------------------------------------------------------------
 class TrendItem(BaseModel):
     trend: str
     source: str
@@ -78,18 +54,6 @@ class KeyPlayerItem(BaseModel):
     url: str
     why_relevant: str
 
-class A03DomainMarketResearchOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    market_overview: str
-    trends: List[TrendItem]
-    regulatory: List[RegulatoryItem]
-    conventions: List[str]
-    key_players: List[KeyPlayerItem]
-    citations: List[str]
-
-# -------------------------------------------------------------------
-# AGENT 04: Competitive Analysis
-# -------------------------------------------------------------------
 class FeatureMatrixItem(BaseModel):
     feature: str
     by_competitor: Dict[str, Literal["yes", "no", "partial"]]
@@ -109,30 +73,12 @@ class GapItem(BaseModel):
     evidence: str
     opportunity_size: Literal["high", "med", "low"]
 
-class A04CompetitiveAnalysisOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    feature_matrix: List[FeatureMatrixItem]
-    pattern_inventory: List[PatternInventoryItem]
-    teardown_notes: List[TeardownNotesItem]
-    gaps: List[GapItem]
-    handoff_top_3_gaps: List[str]
-
-# -------------------------------------------------------------------
-# AGENT 05: Secondary User Research
-# -------------------------------------------------------------------
 class PainThemeItem(BaseModel):
     theme: str
     frequency: str
     sources: List[str]
     representative_signal: str
 
-class A05SecondaryUserResearchOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    pain_themes: List[PainThemeItem]
-
-# -------------------------------------------------------------------
-# AGENT 06: UX Audit on Competitor Products
-# -------------------------------------------------------------------
 class CompetitorIssueItem(BaseModel):
     competitor: str
     issue: str
@@ -145,14 +91,6 @@ class ClientAuditPlaceholder(BaseModel):
     status: Literal["placeholder", "complete"]
     instruction: str
 
-class A06UxAuditOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    competitor_issues: List[CompetitorIssueItem]
-    client_audit: ClientAuditPlaceholder
-
-# -------------------------------------------------------------------
-# AGENT 07: Persona Building
-# -------------------------------------------------------------------
 class GroundedGoal(BaseModel):
     goal: str
     grounded_in: str
@@ -169,16 +107,6 @@ class PersonaItem(BaseModel):
     pains: List[GroundedPain]
     provisional: bool
 
-class A07PersonaBuildingOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    personas: List[PersonaItem]
-    status: str
-    grounding: str
-    open_questions: List[str]
-
-# -------------------------------------------------------------------
-# AGENT 08: JTBD Framework / User Need
-# -------------------------------------------------------------------
 class JobItem(BaseModel):
     job_statement: str
     needs: List[str]
@@ -187,13 +115,6 @@ class JobItem(BaseModel):
     priority: Literal["high", "med", "low"]
     grounded_in: List[str]
 
-class A08JTBDOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    jobs: List[JobItem]
-
-# -------------------------------------------------------------------
-# AGENT 09: Journey Mapping
-# -------------------------------------------------------------------
 class StageItem(BaseModel):
     stage: str
     action: str
@@ -208,15 +129,6 @@ class JourneyItem(BaseModel):
     type: Literal["current", "future"]
     stages: List[StageItem]
 
-class A09JourneyMappingOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    journeys: List[JourneyItem]
-    status: str
-    handoff_highest_friction_stage: str
-
-# -------------------------------------------------------------------
-# AGENT 10: Key Task Flows
-# -------------------------------------------------------------------
 class FlowNode(BaseModel):
     id: str
     label: str
@@ -234,14 +146,6 @@ class FlowItem(BaseModel):
     decisions: List[FlowDecision]
     states: List[str]
 
-class A10KeyTaskFlowsOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    flows: List[FlowItem]
-    handoff_implied_screens: List[str]
-
-# -------------------------------------------------------------------
-# AGENT 11: Information Architecture
-# -------------------------------------------------------------------
 class SitemapNode(BaseModel):
     node: str
     children: List[str]
@@ -255,16 +159,6 @@ class ContentGroup(BaseModel):
     group: str
     rationale: str
 
-class A11IAOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    sitemap: List[SitemapNode]
-    nav_model: List[NavItem]
-    content_groups: List[ContentGroup]
-    handoff_uncertain_nav_items: List[str]
-
-# -------------------------------------------------------------------
-# AGENT 12: Feature Prioritization
-# -------------------------------------------------------------------
 class RICECalc(BaseModel):
     reach: str
     impact: str
@@ -279,13 +173,6 @@ class BacklogItem(BaseModel):
     serves_goal: str
     grounded_in: List[str]
 
-class A12FeaturePrioritizationOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    backlog: List[BacklogItem]
-
-# -------------------------------------------------------------------
-# AGENT 13: Success Matrix
-# -------------------------------------------------------------------
 class MetricItem(BaseModel):
     business_goal: str
     metric: str
@@ -293,37 +180,79 @@ class MetricItem(BaseModel):
     measures_job: str
     target: str
 
-class A13SuccessMatrixOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
+# -------------------------------------------------------------------
+# PHASE MODELS
+# -------------------------------------------------------------------
+class FramePhaseOutput(BaseModel):
+    problem_statement: str
+    assumptions: List[str]
+    constraints: List[str]
+    unknowns: List[str]
+    open_questions: List[str]
+    handoff_scenario: str
+    handoff_sharpest_unknown: str
+    goal_hierarchy: List[GoalHierarchyItem]
+    success_definition: str
+    stakeholder_map: List[StakeholderMapItem]
+    interview_guide: List[str]
+    handoff_top_business_goal: str
+
+class ResearchPhaseOutput(BaseModel):
+    market_overview: str
+    trends: List[TrendItem]
+    regulatory: List[RegulatoryItem]
+    conventions: List[str]
+    key_players: List[KeyPlayerItem]
+    citations: List[str]
+    feature_matrix: List[FeatureMatrixItem]
+    pattern_inventory: List[PatternInventoryItem]
+    teardown_notes: List[TeardownNotesItem]
+    gaps: List[GapItem]
+    handoff_top_3_gaps: List[str]
+    pain_themes: List[PainThemeItem]
+    competitor_issues: List[CompetitorIssueItem]
+    client_audit: ClientAuditPlaceholder
+
+class SynthesisPhaseOutput(BaseModel):
+    personas: List[PersonaItem]
+    persona_status: str
+    persona_grounding: str
+    persona_open_questions: List[str]
+    jobs: List[JobItem]
+    journeys: List[JourneyItem]
+    journey_status: str
+    handoff_highest_friction_stage: str
+
+class StructurePhaseOutput(BaseModel):
+    flows: List[FlowItem]
+    handoff_implied_screens: List[str]
+    sitemap: List[SitemapNode]
+    nav_model: List[NavItem]
+    content_groups: List[ContentGroup]
+    handoff_uncertain_nav_items: List[str]
+    backlog: List[BacklogItem]
     metrics_tree: List[MetricItem]
 
 # -------------------------------------------------------------------
-# AGENT 14: Report Compiler
+# WIREFRAME MODELS
 # -------------------------------------------------------------------
-class A14ReportCompilerOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
-    executive_summary: str
-    key_findings: List[str]
-    strategic_recommendations: List[str]
-    next_steps_for_design_team: List[str]
+class WireframeRegion(BaseModel):
+    type: Literal['header','nav','sidebar','content','list','form','card','cta','footer']
+    label: str
+    items: List[str] = Field(default_factory=list)
 
-# -------------------------------------------------------------------
-# AGENT 15: Wireframe Generator
-# -------------------------------------------------------------------
 class WireframeScreen(BaseModel):
-    screen_name: str
-    html_tailwind_code: str
-    description: str
+    name: str
+    route: str
+    purpose: str
+    regions: List[WireframeRegion]
 
-class A15WireframeOutput(BaseModel):
-    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
+class WireframeOutput(BaseModel):
     screens: List[WireframeScreen]
 
 # -------------------------------------------------------------------
 # GRAPH STATE
 # -------------------------------------------------------------------
-from typing import Generic, TypeVar
-
 T = TypeVar('T')
 
 class AgentResult(BaseModel, Generic[T]):
@@ -338,18 +267,8 @@ class WorkflowState(BaseModel):
     cancelled: bool = False
     
     orchestrator: AgentResult[OrchestratorOutput] = AgentResult()
-    a01_brief_framing: AgentResult[A01BriefFramingOutput] = AgentResult()
-    a02_business_goals: AgentResult[A02BusinessGoalsOutput] = AgentResult()
-    a03_domain_market: AgentResult[A03DomainMarketResearchOutput] = AgentResult()
-    a04_competitive: AgentResult[A04CompetitiveAnalysisOutput] = AgentResult()
-    a05_secondary_research: AgentResult[A05SecondaryUserResearchOutput] = AgentResult()
-    a06_ux_audit: AgentResult[A06UxAuditOutput] = AgentResult()
-    a07_persona: AgentResult[A07PersonaBuildingOutput] = AgentResult()
-    a08_jtbd: AgentResult[A08JTBDOutput] = AgentResult()
-    a09_journey: AgentResult[A09JourneyMappingOutput] = AgentResult()
-    a10_task_flows: AgentResult[A10KeyTaskFlowsOutput] = AgentResult()
-    a11_ia: AgentResult[A11IAOutput] = AgentResult()
-    a12_prioritization: AgentResult[A12FeaturePrioritizationOutput] = AgentResult()
-    a13_success_matrix: AgentResult[A13SuccessMatrixOutput] = AgentResult()
-    a14_compiler: AgentResult[A14ReportCompilerOutput] = AgentResult()
-    a15_wireframes: AgentResult[A15WireframeOutput] = AgentResult()
+    frame: AgentResult[FramePhaseOutput] = AgentResult()
+    research: AgentResult[ResearchPhaseOutput] = AgentResult()
+    synthesis: AgentResult[SynthesisPhaseOutput] = AgentResult()
+    structure: AgentResult[StructurePhaseOutput] = AgentResult()
+    wireframe: AgentResult[WireframeOutput] = AgentResult()
