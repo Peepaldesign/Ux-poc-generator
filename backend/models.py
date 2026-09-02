@@ -298,6 +298,28 @@ class A13SuccessMatrixOutput(BaseModel):
     metrics_tree: List[MetricItem]
 
 # -------------------------------------------------------------------
+# AGENT 14: Report Compiler
+# -------------------------------------------------------------------
+class A14ReportCompilerOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
+    executive_summary: str
+    key_findings: List[str]
+    strategic_recommendations: List[str]
+    next_steps_for_design_team: List[str]
+
+# -------------------------------------------------------------------
+# AGENT 15: Wireframe Generator
+# -------------------------------------------------------------------
+class WireframeScreen(BaseModel):
+    screen_name: str
+    html_tailwind_code: str
+    description: str
+
+class A15WireframeOutput(BaseModel):
+    thinking_process: str = Field(description="Step-by-step reasoning before generating the final output", default="")
+    screens: List[WireframeScreen]
+
+# -------------------------------------------------------------------
 # GRAPH STATE
 # -------------------------------------------------------------------
 from typing import Generic, TypeVar
@@ -313,6 +335,7 @@ class AgentResult(BaseModel, Generic[T]):
 class WorkflowState(BaseModel):
     brief: str = ""
     job_id: str = ""
+    cancelled: bool = False
     
     orchestrator: AgentResult[OrchestratorOutput] = AgentResult()
     a01_brief_framing: AgentResult[A01BriefFramingOutput] = AgentResult()
@@ -328,3 +351,5 @@ class WorkflowState(BaseModel):
     a11_ia: AgentResult[A11IAOutput] = AgentResult()
     a12_prioritization: AgentResult[A12FeaturePrioritizationOutput] = AgentResult()
     a13_success_matrix: AgentResult[A13SuccessMatrixOutput] = AgentResult()
+    a14_compiler: AgentResult[A14ReportCompilerOutput] = AgentResult()
+    a15_wireframes: AgentResult[A15WireframeOutput] = AgentResult()

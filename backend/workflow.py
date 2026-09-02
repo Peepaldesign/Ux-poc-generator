@@ -6,12 +6,12 @@ from backend.models import (
     A02BusinessGoalsOutput, A03DomainMarketResearchOutput, A04CompetitiveAnalysisOutput,
     A05SecondaryUserResearchOutput, A06UxAuditOutput, A07PersonaBuildingOutput,
     A08JTBDOutput, A09JourneyMappingOutput, A10KeyTaskFlowsOutput, A11IAOutput,
-    A12FeaturePrioritizationOutput, A13SuccessMatrixOutput
+    A12FeaturePrioritizationOutput, A13SuccessMatrixOutput, A14ReportCompilerOutput
 )
 from backend.prompts import (
     ORCHESTRATOR_PROMPT, A01_PROMPT, A02_PROMPT, A03_PROMPT, A04_PROMPT,
     A05_PROMPT, A06_PROMPT, A07_PROMPT, A08_PROMPT, A09_PROMPT, A10_PROMPT,
-    A11_PROMPT, A12_PROMPT, A13_PROMPT, FALLBACKS
+    A11_PROMPT, A12_PROMPT, A13_PROMPT, A14_PROMPT, FALLBACKS
 )
 from backend.degradation import call_agent_with_degradation
 
@@ -164,6 +164,18 @@ def a13_node(state: WorkflowState):
     result = call_agent_with_degradation(A13_PROMPT, ctx, A13SuccessMatrixOutput, FALLBACKS["a13"])
     return {"a13_success_matrix": result}
 
+def a14_node(state: WorkflowState):
+    # A14 always runs to compile whatever is available.
+    print("Running A14 (Report Compiler)...")
+    ctx = _get_upstream_context(state, [
+        "a01_brief_framing", "a02_business_goals", "a03_domain_market",
+        "a04_competitive", "a05_secondary_research", "a06_ux_audit",
+        "a07_persona", "a08_jtbd", "a09_journey", "a10_task_flows",
+        "a11_ia", "a12_prioritization", "a13_success_matrix"
+    ])
+    result = call_agent_with_degradation(A14_PROMPT, ctx, A14ReportCompilerOutput, "Unable to compile final report. Please review agent outputs manually.")
+    return {"a14_compiler": result}
+
 # --- Build Graph ---
 builder = StateGraph(WorkflowState)
 builder.add_node("orchestrator", orchestrator_node)
@@ -180,10 +192,8 @@ builder.add_node("a10", a10_node)
 builder.add_node("a11", a11_node)
 builder.add_node("a12", a12_node)
 builder.add_node("a13", a13_node)
+builder.add_node("a14", a14_node)
 
-# We use a purely sequential flow because dependencies fall mostly in order,
-# and agents internally check `_should_skip` to decide if they run.
-# This prevents complex branching logic while respecting the DAG dependencies.
 builder.add_edge(START, "orchestrator")
 builder.add_edge("orchestrator", "a01")
 builder.add_edge("a01", "a02")
@@ -198,6 +208,7 @@ builder.add_edge("a09", "a10")
 builder.add_edge("a10", "a11")
 builder.add_edge("a11", "a12")
 builder.add_edge("a12", "a13")
-builder.add_edge("a13", END)
+builder.add_edge("a13", "a14")
+builder.add_edge("a14", END)
 
 workflow_app = builder.compile()
