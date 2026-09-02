@@ -85,7 +85,7 @@ def _get_upstream_context(state: WorkflowState, fields: list) -> str:
             dump = attr.payload.model_dump(exclude={'thinking_process'})
             extracted = {}
             for k, v in dump.items():
-                if k.startswith("handoff_") or k in ("success_definition", "problem_statement"):
+                if k.startswith("handoff_") or k in ("success_definition", "problem_statement", "primary_scenario", "existence", "objective", "signals"):
                     extracted[k] = v
             if extracted:
                 context[f] = extracted
@@ -103,57 +103,48 @@ async def orchestrator_node(state: WorkflowState):
         "Manual classification required.",
         tier='lite'
     )
+    if result.status == "success" and result.payload and result.payload.needs_disambiguation:
+        result.status = "degraded"
+        result.error_message = "Vague brief: " + (result.payload.clarifying_question or "Please provide more details.")
     await asyncio.sleep(RPM_SLEEP_SECONDS)
     return {"orchestrator": result}
 
+def _build_context(state: WorkflowState, deps: list) -> str:
+    header = f"SOURCE BRIEF (authoritative — produce content ONLY about this; never substitute another domain):\n{state.brief}\n\nSUPPLEMENTARY CONTEXT (Handoffs & upstream):\n"
+    return header + _get_upstream_context(state, deps) + _get_skip_text(state)
+
 async def frame_node(state: WorkflowState):
     print("Running Frame Phase...")
-    ctx = _get_upstream_context(state, ["orchestrator"]) + f"\nRaw Brief: {state.brief}" + _get_skip_text(state)
+    ctx = _build_context(state, ["orchestrator"])
     result = await call_agent_with_degradation(
-        FRAME_PROMPT,
-        ctx,
-        FramePhaseOutput,
-        FALLBACKS["frame"],
-        tier='lite'
+        FRAME_PROMPT, ctx, FramePhaseOutput, FALLBACKS["frame"], tier='lite', raw_brief=state.brief
     )
     await asyncio.sleep(RPM_SLEEP_SECONDS)
     return {"frame": result}
 
 async def research_node(state: WorkflowState):
     print("Running Research Phase...")
-    ctx = _get_upstream_context(state, ["orchestrator", "frame"]) + _get_skip_text(state)
+    ctx = _build_context(state, ["orchestrator", "frame"])
     result = await call_agent_with_degradation(
-        RESEARCH_PROMPT,
-        ctx,
-        ResearchPhaseOutput,
-        FALLBACKS["research"],
-        tier='flash'
+        RESEARCH_PROMPT, ctx, ResearchPhaseOutput, FALLBACKS["research"], tier='flash', raw_brief=state.brief
     )
     await asyncio.sleep(RPM_SLEEP_SECONDS)
     return {"research": result}
 
 async def synthesis_node(state: WorkflowState):
     print("Running Synthesis Phase...")
-    ctx = _get_upstream_context(state, ["frame", "research"]) + _get_skip_text(state)
+    ctx = _build_context(state, ["orchestrator", "frame", "research"])
     result = await call_agent_with_degradation(
-        SYNTHESIS_PROMPT,
-        ctx,
-        SynthesisPhaseOutput,
-        FALLBACKS["synthesis"],
-        tier='flash'
+        SYNTHESIS_PROMPT, ctx, SynthesisPhaseOutput, FALLBACKS["synthesis"], tier='flash', raw_brief=state.brief
     )
     await asyncio.sleep(RPM_SLEEP_SECONDS)
     return {"synthesis": result}
 
 async def structure_node(state: WorkflowState):
     print("Running Structure Phase...")
-    ctx = _get_upstream_context(state, ["frame", "research", "synthesis"]) + _get_skip_text(state)
+    ctx = _build_context(state, ["orchestrator", "frame", "research", "synthesis"])
     result = await call_agent_with_degradation(
-        STRUCTURE_PROMPT,
-        ctx,
-        StructurePhaseOutput,
-        FALLBACKS["structure"],
-        tier='flash'
+        STRUCTURE_PROMPT, ctx, StructurePhaseOutput, FALLBACKS["structure"], tier='flash', raw_brief=state.brief
     )
     await asyncio.sleep(RPM_SLEEP_SECONDS)
     return {"structure": result}
@@ -171,16 +162,23 @@ async def wireframe_node(state: WorkflowState):
         wf_context["top_persona"] = dump.get("personas")[0] if dump.get("personas") else None
         wf_context["top_job"] = dump.get("jobs")[0] if dump.get("jobs") else None
     
-    ctx = json.dumps(wf_context, separators=(',', ':')) + _get_skip_text(state)
+    header = f"SOURCE BRIEF (authoritative — produce content ONLY about this; never substitute another domain):\n{state.brief}\n\nSUPPLEMENTARY CONTEXT (Handoffs & upstream):\n"
+    ctx = header + json.dumps(wf_context, separators=(',', ':')) + _get_skip_text(state)
     result = await call_agent_with_degradation(
-        WIREFRAME_PROMPT,
-        ctx,
-        WireframeOutput,
-        FALLBACKS["wireframe"],
-        tier='wireframe'
+        WIREFRAME_PROMPT, ctx, WireframeOutput, FALLBACKS["wireframe"], tier='wireframe', raw_brief=state.brief
     )
     await asyncio.sleep(RPM_SLEEP_SECONDS)
     return {"wireframe": result}
+
+def router_after_orch(state: WorkflowState):
+    if state.orchestrator.status == "degraded" or not state.orchestrator.payload:
+        return END
+    return "frame"
+
+def router_after_frame(state: WorkflowState):
+    if state.frame.status == "degraded" or not state.frame.payload:
+        return END
+    return "research"
 
 # --- Build Graph ---
 builder = StateGraph(WorkflowState)
@@ -192,11 +190,10 @@ builder.add_node("structure", structure_node)
 builder.add_node("wireframe", wireframe_node)
 
 builder.add_edge(START, "orchestrator")
-builder.add_edge("orchestrator", "frame")
-builder.add_edge("frame", "research")
+builder.add_conditional_edges("orchestrator", router_after_orch)
+builder.add_conditional_edges("frame", router_after_frame)
 builder.add_edge("research", "synthesis")
 builder.add_edge("synthesis", "structure")
-builder.add_edge("structure", "wireframe")
-builder.add_edge("wireframe", END)
+builder.add_edge("structure", END)
 
 workflow_app = builder.compile()

@@ -32,6 +32,32 @@ const inspectorJson = document.getElementById('inspector-json');
 // Init
 function init() {
     renderPipeline();
+    document.getElementById('btn-collapse-history').addEventListener('click', () => {
+        document.getElementById('sidebar-history').style.display = 'none';
+        document.getElementById('btn-expand-history').style.display = 'block';
+    });
+    document.getElementById('btn-expand-history').addEventListener('click', () => {
+        document.getElementById('sidebar-history').style.display = 'flex';
+        document.getElementById('btn-expand-history').style.display = 'none';
+    });
+    
+    const btnGenWf = document.getElementById('btn-generate-wireframes');
+    if(btnGenWf) {
+        btnGenWf.addEventListener('click', async () => {
+            if(!currentJobId) return;
+            btnGenWf.disabled = true;
+            btnGenWf.innerHTML = "Generating...";
+            try {
+                await fetch(`${API_BASE}/generate_wireframes/${currentJobId}`, { method: 'POST' });
+                startPolling(); // Restart polling to track wireframes
+            } catch(e) {
+                console.error(e);
+                btnGenWf.innerHTML = "Generate Wireframes";
+                btnGenWf.disabled = false;
+            }
+        });
+    }
+
     populateInspectorSelect();
     loadHistory();
     
@@ -83,7 +109,15 @@ function renderPipeline(activeKey = null) {
                 <div class="agent-desc">${phase.desc}</div>
             </div>
         `;
+        
+        if (status === 'degraded' || status === 'error') {
+            const errMsg = currentState[phase.key]?.error_message || '';
+            if (errMsg) {
+                el.innerHTML += `<div style="color: var(--error); font-size: 0.75rem; margin-top: 4px;">Error: ${errMsg}</div>`;
+            }
+        }
         pipelineList.appendChild(el);
+
     });
 }
 
@@ -300,10 +334,57 @@ function renderReportView() {
     views.report.innerHTML = html;
 }
 
+
 function renderWireframesView() {
+    const container = document.getElementById('wireframes-container');
+    const btnGenWf = document.getElementById('btn-generate-wireframes');
+    const statusText = document.getElementById('wireframe-status-text');
+    
+    // Check if report is done
+    if (!currentState || currentState.structure?.status !== 'success') {
+        if(btnGenWf) btnGenWf.disabled = true;
+        if(statusText) statusText.innerText = "Requires completed report";
+        if(container) container.innerHTML = "";
+        return;
+    }
+    
+    // Check wireframe status
     const w = currentState.wireframe;
-    if (!w || w.status !== 'success' || !w.payload || !w.payload.screens) {
-        views.wireframes.innerHTML = `<div style="color:var(--text-muted); padding: 40px; text-align: center;">Wireframes not generated yet or failed.</div>`;
+    if (!w || w.status === 'pending') {
+        if(btnGenWf) {
+            btnGenWf.disabled = false;
+            btnGenWf.innerHTML = "Generate Wireframes";
+        }
+        if(statusText) statusText.innerText = "Ready to generate wireframes";
+        if(container) container.innerHTML = "";
+        return;
+    }
+    
+    if (w.status === 'running') {
+        if(btnGenWf) {
+            btnGenWf.disabled = true;
+            btnGenWf.innerHTML = "Generating...";
+        }
+        if(statusText) statusText.innerText = "Wireframes are generating...";
+        if(container) container.innerHTML = `<div style="text-align: center; padding: 40px;"><div class="spinner"></div></div>`;
+        return;
+    }
+
+    if (w.status === 'degraded' || w.status === 'error') {
+        if(btnGenWf) {
+            btnGenWf.disabled = false;
+            btnGenWf.innerHTML = "Retry Wireframes";
+        }
+        if(statusText) statusText.innerText = `Failed: ${w.error_message || 'Unknown error'}`;
+        if(container) container.innerHTML = "";
+        return;
+    }
+
+    if(btnGenWf) btnGenWf.style.display = 'none';
+    if(statusText) statusText.style.display = 'none';
+
+    if (!w.payload || !w.payload.screens) {
+        if(container) container.innerHTML = `<div style="color:var(--text-muted); padding: 40px; text-align: center;">No screens generated.</div>`;
         return;
     }
 
@@ -329,7 +410,8 @@ function renderWireframesView() {
         html += screenHtml;
     });
 
-    views.wireframes.innerHTML = html;
+    if(container) container.innerHTML = html;
 }
+
 
 init();

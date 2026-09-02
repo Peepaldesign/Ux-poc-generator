@@ -66,13 +66,43 @@ async def get_history():
         history.append({"job_id": j_id, "brief": bp})
     return list(reversed(history))
 
+async def run_wireframes(job_id: str):
+    state = jobs_store.get(job_id)
+    if not state: return
+    
+    state.wireframe.status = "running"
+    jobs_store[job_id] = state
+    
+    try:
+        from backend.workflow import wireframe_node
+        result_dict = await wireframe_node(state)
+        state.wireframe = result_dict["wireframe"]
+        jobs_store[job_id] = state
+    except Exception as e:
+        print(f"Wireframes failed: {e}")
+        state.wireframe.status = "degraded"
+        state.wireframe.error_message = str(e)
+        jobs_store[job_id] = state
+
+@app.post("/api/generate_wireframes/{job_id}")
+async def generate_wireframes(job_id: str, background_tasks: BackgroundTasks):
+    if job_id not in jobs_store:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    background_tasks.add_task(run_wireframes, job_id)
+    return {"status": "started"}
+
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str):
     if job_id not in jobs_store:
         raise HTTPException(status_code=404, detail="Job not found")
     state = jobs_store[job_id]
-    # Done if structure phase finished or cancelled
-    is_done = state.cancelled or state.structure.status != "pending"
+    
+    # It's done if cancelled, or if structure is finished AND wireframes isn't currently running
+    structure_done = state.structure.status != "pending"
+    wireframe_running = state.wireframe.status == "running"
+    
+    is_done = state.cancelled or (structure_done and not wireframe_running)
     return {"job_id": job_id, "is_done": is_done, "state": state.model_dump()}
 
 def _build_markdown_report(state: WorkflowState) -> str:

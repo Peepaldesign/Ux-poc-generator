@@ -251,8 +251,12 @@
     </style>
 </head>
 <body>
-    <div class="sidebar-history">
-        <div class="history-header">History</div>
+    <button id="btn-expand-history" style="display: none; position: absolute; left: 0; top: 10px; background: var(--bg-card); color: white; border: 1px solid var(--border); padding: 5px; cursor: pointer; border-radius: 0 4px 4px 0; z-index: 100;">▶ History</button>
+    <div class="sidebar-history" id="sidebar-history">
+        <div class="history-header">
+    History
+    <button id="btn-collapse-history" style="float: right; background: none; border: none; color: var(--text-muted); cursor: pointer;">◀</button>
+</div>
         <div class="history-list" id="history-list">
             <!-- Populated by JS -->
         </div>
@@ -289,7 +293,13 @@
             </div>
         </div>
 
-        <div class="view-content" id="view-wireframes" style="display: none;"></div>
+        <div class="view-content" id="view-wireframes" style="display: none;">
+    <div id="wireframe-controls" style="margin-bottom: 20px; text-align: center;">
+        <button id="btn-generate-wireframes" class="btn-primary" style="width: auto; padding: 10px 20px;" disabled>Generate Wireframes</button>
+        <div id="wireframe-status-text" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Requires completed report</div>
+    </div>
+    <div id="wireframes-container"></div>
+</div>
         
         <div class="view-content" id="view-inspector" style="display: none;">
             <select id="inspector-select" class="phase-select">
