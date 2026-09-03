@@ -122,10 +122,28 @@ function init() {
     });
 }
 
-function renderPipeline(activeKey = null) {
+function renderPipeline(activeKey = null, isDone = false) {
     pipelineList.innerHTML = '';
+    
+    // Infer running phase: the first one that is pending
+    let inferredRunningKey = activeKey;
+    if (!inferredRunningKey && currentState && !isDone) {
+        for (const phase of PHASE_LIST) {
+            if (currentState[phase.key]?.status === 'pending') {
+                inferredRunningKey = phase.key;
+                break;
+            }
+        }
+    }
+
     PHASE_LIST.forEach(phase => {
-        const status = currentState ? currentState[phase.key]?.status || 'pending' : 'pending';
+        let status = currentState ? currentState[phase.key]?.status || 'pending' : 'pending';
+        
+        // If this is the inferred running phase, pretend it's running for the UI
+        if (status === 'pending' && phase.key === inferredRunningKey) {
+            status = 'running';
+        }
+
         let icon = '○';
         if (status === 'running') icon = '<div class="spinner"></div>';
         else if (status === 'success') icon = '✓';
@@ -134,7 +152,7 @@ function renderPipeline(activeKey = null) {
         else if (status === 'error') icon = '✗';
 
         const el = document.createElement('div');
-        el.className = `agent-card status-${status} ${activeKey === phase.key ? 'active' : ''}`;
+        el.className = `agent-card status-${status} ${inferredRunningKey === phase.key ? 'active' : ''}`;
         el.innerHTML = `
             <div class="agent-status-icon">${icon}</div>
             <div class="agent-info">
@@ -250,7 +268,8 @@ async function pollStatus() {
             }
         }
 
-        renderPipeline(activeKey);
+        renderPipeline(activeKey, data.is_done);
+
         updateViews();
 
         if (data.is_done) {
@@ -274,7 +293,7 @@ function loadJob(jobId) {
         .then(data => {
             currentState = data.state;
             briefInput.value = currentState.brief;
-            renderPipeline();
+            renderPipeline(null, data.is_done);
             updateViews();
             downloadBar.style.display = 'flex';
         });
