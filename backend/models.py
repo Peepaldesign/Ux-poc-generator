@@ -234,21 +234,45 @@ class StructurePhaseOutput(BaseModel):
     metrics_tree: List[MetricItem]
 
 # -------------------------------------------------------------------
-# WIREFRAME MODELS
+# HI-FI MODELS
 # -------------------------------------------------------------------
-class WireframeRegion(BaseModel):
-    type: Literal['header','nav','sidebar','content','list','form','card','cta','footer']
-    label: str
-    items: List[str] = Field(default_factory=list)
+class TypographyTokens(BaseModel):
+    font_family: str
+    scale: str
 
-class WireframeScreen(BaseModel):
-    name: str
-    route: str
-    purpose: str
-    regions: List[WireframeRegion]
+class DesignTokens(BaseModel):
+    color: str
+    typography: TypographyTokens
+    spacing: str
+    radius: str
+    elevation: str
+    density: str
 
-class WireframeOutput(BaseModel):
-    screens: List[WireframeScreen]
+class ComponentStyles(BaseModel):
+    buttons: str
+    inputs: str
+    cards: str
+    tables: str
+    nav_style_notes: str
+
+class AccessibilityTokens(BaseModel):
+    min_contrast: str
+    min_tap_target_px: int
+    required_states: str
+
+class VisualDesignSystem(BaseModel):
+    design_rationale: str
+    tone: str
+    tokens: DesignTokens
+    components: ComponentStyles
+    accessibility: AccessibilityTokens
+    provisional: bool
+
+class HiFiScreen(BaseModel):
+    screen_ref: str
+    device: Literal["desktop", "mobile"]
+    html: str
+    design_notes: str
 
 # -------------------------------------------------------------------
 # GRAPH STATE
@@ -271,4 +295,5 @@ class WorkflowState(BaseModel):
     research: AgentResult[ResearchPhaseOutput] = AgentResult()
     synthesis: AgentResult[SynthesisPhaseOutput] = AgentResult()
     structure: AgentResult[StructurePhaseOutput] = AgentResult()
-    wireframe: AgentResult[WireframeOutput] = AgentResult()
+    design_system: AgentResult[VisualDesignSystem] = AgentResult()
+    hifi_screens: Dict[str, AgentResult[HiFiScreen]] = Field(default_factory=dict)

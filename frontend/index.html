@@ -205,27 +205,25 @@
             color: #d4d4d4;
         }
         
-        /* Wireframe Renderer CSS */
-        .wf-screen { background: #f5f5f5; border: 2px solid #ddd; border-radius: 8px; padding: 0; margin-bottom: 32px; overflow: hidden; color: #1a1a1a; }
-        .wf-screen-title { background: #e5e7eb; padding: 10px 16px; font-weight: 600; font-size: 0.9rem; color: #374151; border-bottom: 2px solid #ddd; display: flex; justify-content: space-between; }
-        .wf-screen-title span { font-size: 0.75rem; color: #6b7280; font-weight: 400; }
-        .wf-body { display: grid; grid-template-columns: 1fr; gap: 0; min-height: 400px; }
-        .wf-region { border: 1px dashed #9ca3af; padding: 16px; background: white; position: relative; }
-        .wf-region::before { content: attr(data-type); position: absolute; top: 4px; right: 8px; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.1em; color: #9ca3af; font-weight: 600; }
-        .wf-region.header { background: #1e293b; color: white; grid-column: 1/-1; }
-        .wf-region.nav { background: #334155; color: white; }
-        .wf-region.sidebar { background: #f8fafc; border-right: 2px solid #e2e8f0; }
-        .wf-region.content { background: #ffffff; }
-        .wf-region.cta { background: #eff6ff; border: 2px solid #3b82f6; text-align: center; }
-        .wf-region.footer { background: #1e293b; color: #94a3b8; grid-column: 1/-1; font-size: 0.8rem; }
-        .wf-region.form { background: #fefce8; }
-        .wf-region.card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; }
-        .wf-region.list { background: #fff; }
-        .wf-label { font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: #374151; }
-        .wf-items { font-size: 0.78rem; color: #6b7280; }
-        .wf-items li { margin: 2px 0; list-style: disc inside; }
-        
-        .wf-has-sidebar { grid-template-columns: 200px 1fr; }
+        /* Hi-Fi Screen Cards CSS */
+        .hifi-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+        .hifi-card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-card); }
+        .hifi-card-title { font-weight: 600; font-size: 0.9rem; }
+        .hifi-card-meta { font-size: 0.75rem; color: var(--text-muted); }
+        .hifi-card-actions { display: flex; gap: 8px; align-items: center; }
+        .hifi-card-actions button { padding: 4px 12px; font-size: 0.78rem; border-radius: 4px; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); }
+        .hifi-card-actions button:hover { background: var(--accent); border-color: var(--accent); }
+        .hifi-card-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .hifi-card-actions select { padding: 4px 8px; font-size: 0.78rem; border-radius: 4px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border); }
+        .hifi-iframe-wrapper { background: #ffffff; min-height: 200px; position: relative; }
+        .hifi-iframe-wrapper iframe { width: 100%; border: none; min-height: 600px; }
+        .hifi-placeholder { padding: 40px; text-align: center; color: var(--text-muted); }
+        .hifi-error { padding: 15px; background: rgba(239, 68, 68, 0.1); color: var(--error); border-radius: 0; font-size: 0.85rem; }
+        .hifi-notes { padding: 10px 16px; font-size: 0.78rem; color: var(--text-muted); border-top: 1px solid var(--border); font-style: italic; }
+        .ds-token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; font-size: 0.85rem; }
+        .ds-token { background: var(--bg-card); padding: 10px; border-radius: 6px; }
+        .ds-token-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .ds-token-value { font-weight: 500; }
         
         /* Phase Inspector Select */
         .phase-select {
@@ -276,7 +274,7 @@
     <div class="main-content">
         <div class="tab-bar">
             <div class="tab active" data-tab="report">📄 Full Report</div>
-            <div class="tab" data-tab="wireframes">🖼️ Wireframes</div>
+            <div class="tab" data-tab="hifi">🎨 Hi-Fi Screens</div>
             <div class="tab" data-tab="inspector">🔍 Phase Inspector</div>
         </div>
 
@@ -293,13 +291,23 @@
             </div>
         </div>
 
-        <div class="view-content" id="view-wireframes" style="display: none;">
-    <div id="wireframe-controls" style="margin-bottom: 20px; text-align: center;">
-        <button id="btn-generate-wireframes" class="btn-primary" style="width: auto; padding: 10px 20px;" disabled>Generate Wireframes</button>
-        <div id="wireframe-status-text" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Requires completed report</div>
-    </div>
-    <div id="wireframes-container"></div>
-</div>
+        <div class="view-content" id="view-hifi" style="display: none;">
+            <div id="hifi-controls" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <button id="btn-generate-all-hifi" class="btn-primary" style="width: auto; padding: 10px 20px;" disabled>Generate All Screens</button>
+                    <span id="hifi-status-text" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 10px;">Requires completed report</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-dl-tokens-json" class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" disabled>⬇ Design Tokens JSON</button>
+                    <button id="btn-dl-tokens-css" class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 0.8rem;" disabled>⬇ CSS Variables</button>
+                </div>
+            </div>
+            <div id="design-system-summary" style="display:none; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <h3 style="margin-bottom: 10px; color: var(--accent);">🎨 Design System</h3>
+                <div id="design-system-content"></div>
+            </div>
+            <div id="hifi-screen-list"></div>
+        </div>
         
         <div class="view-content" id="view-inspector" style="display: none;">
             <select id="inspector-select" class="phase-select">

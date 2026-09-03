@@ -16,9 +16,9 @@ def get_llm(tier: str):
     if tier == 'lite':
         model_name = os.getenv("GEMINI_LITE_MODEL", "gemini-3.5-flash-lite")
         return ChatGoogleGenerativeAI(model=model_name, temperature=0.2)
-    elif tier == 'wireframe':
+    elif tier == 'hifi':
         flash_default = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.6-flash")
-        model_name = os.getenv("WIREFRAME_MODEL", flash_default)
+        model_name = os.getenv("HIFI_MODEL", flash_default)
         if model_name.startswith('claude'):
             return ChatAnthropic(model=model_name, temperature=0.2)
         else:

@@ -5,11 +5,11 @@ from langgraph.graph import StateGraph, START, END
 from backend.models import (
     WorkflowState, AgentResult, OrchestratorOutput, 
     FramePhaseOutput, ResearchPhaseOutput, SynthesisPhaseOutput, 
-    StructurePhaseOutput, WireframeOutput
+    StructurePhaseOutput, VisualDesignSystem, HiFiScreen
 )
 from backend.prompts import (
     ORCHESTRATOR_PROMPT, FRAME_PROMPT, RESEARCH_PROMPT, 
-    SYNTHESIS_PROMPT, STRUCTURE_PROMPT, WIREFRAME_PROMPT, FALLBACKS
+    SYNTHESIS_PROMPT, STRUCTURE_PROMPT, DESIGN_SYSTEM_PROMPT, HIFI_PROMPT, FALLBACKS
 )
 from backend.degradation import call_agent_with_degradation, RPM_SLEEP_SECONDS
 
@@ -149,26 +149,51 @@ async def structure_node(state: WorkflowState):
     await asyncio.sleep(RPM_SLEEP_SECONDS)
     return {"structure": result}
 
-async def wireframe_node(state: WorkflowState):
-    print("Running Wireframe Phase...")
-    wf_context = {}
-    if state.structure.payload:
-        dump = state.structure.payload.model_dump()
-        wf_context["flows"] = dump.get("flows")
-        wf_context["sitemap"] = dump.get("sitemap")
-        wf_context["nav_model"] = dump.get("nav_model")
+async def design_system_node(state: WorkflowState):
+    print("Running Design System Phase...")
+    ds_context = {}
     if state.synthesis.payload:
         dump = state.synthesis.payload.model_dump()
-        wf_context["top_persona"] = dump.get("personas")[0] if dump.get("personas") else None
-        wf_context["top_job"] = dump.get("jobs")[0] if dump.get("jobs") else None
+        ds_context["personas"] = dump.get("personas", [])[:2]  # top 2 personas for context
+    if state.structure.payload:
+        dump = state.structure.payload.model_dump()
+        ds_context["sitemap"] = dump.get("sitemap", [])
+    if state.research.payload:
+        ds_context["market_overview"] = state.research.payload.market_overview[:200] if state.research.payload.market_overview else ""
+    if state.frame.payload:
+        ds_context["problem_statement"] = state.frame.payload.problem_statement
     
-    header = f"SOURCE BRIEF (authoritative — produce content ONLY about this; never substitute another domain):\n{state.brief}\n\nSUPPLEMENTARY CONTEXT (Handoffs & upstream):\n"
-    ctx = header + json.dumps(wf_context, separators=(',', ':')) + _get_skip_text(state)
+    header = f"SOURCE BRIEF (authoritative — produce content ONLY about this; never substitute another domain):\n{state.brief}\n\nSUPPLEMENTARY CONTEXT:\n"
+    ctx = header + json.dumps(ds_context, separators=(',', ':'))
     result = await call_agent_with_degradation(
-        WIREFRAME_PROMPT, ctx, WireframeOutput, FALLBACKS["wireframe"], tier='wireframe', raw_brief=state.brief
+        DESIGN_SYSTEM_PROMPT, ctx, VisualDesignSystem, FALLBACKS["design_system"], tier='hifi', raw_brief=state.brief
     )
     await asyncio.sleep(RPM_SLEEP_SECONDS)
-    return {"wireframe": result}
+    return {"design_system": result}
+
+async def hifi_screen_node(state: WorkflowState, screen_ref: str, device: str = "desktop"):
+    """Generate a single hi-fi screen on demand. Called from the API, not from the graph."""
+    print(f"Running Hi-Fi Screen for: {screen_ref} ({device})...")
+    
+    # Build screen spec from structure
+    screen_spec = {"name": screen_ref, "device": device}
+    if state.structure.payload:
+        for flow in state.structure.payload.flows:
+            for node in flow.nodes:
+                if node.type == "screen" and (node.label.lower() in screen_ref.lower() or screen_ref.lower() in node.label.lower()):
+                    screen_spec["purpose"] = f"Screen in flow '{flow.name}' serving job '{flow.serves_job}'"
+                    break
+    if "purpose" not in screen_spec:
+        screen_spec["purpose"] = f"Application screen: {screen_ref}"
+    
+    # Build context with design system tokens + screen spec
+    ds_json = state.design_system.payload.model_dump_json() if state.design_system.payload else "{}"
+    ctx = f"VISUAL DESIGN SYSTEM:\n{ds_json}\n\nTARGET DEVICE: {device}\n\nSCREEN SPECIFICATION:\n{json.dumps(screen_spec, separators=(',', ':'))}\n\nBRIEF: {state.brief[:300]}"
+    
+    result = await call_agent_with_degradation(
+        HIFI_PROMPT, ctx, HiFiScreen, FALLBACKS["hifi"], tier='hifi', raw_brief=state.brief
+    )
+    return result
 
 def router_after_orch(state: WorkflowState):
     if state.orchestrator.status == "degraded" or not state.orchestrator.payload:
@@ -187,13 +212,14 @@ builder.add_node("frame", frame_node)
 builder.add_node("research", research_node)
 builder.add_node("synthesis", synthesis_node)
 builder.add_node("structure", structure_node)
-builder.add_node("wireframe", wireframe_node)
+builder.add_node("design_system", design_system_node)
 
 builder.add_edge(START, "orchestrator")
 builder.add_conditional_edges("orchestrator", router_after_orch)
 builder.add_conditional_edges("frame", router_after_frame)
 builder.add_edge("research", "synthesis")
 builder.add_edge("synthesis", "structure")
-builder.add_edge("structure", END)
+builder.add_edge("structure", "design_system")
+builder.add_edge("design_system", END)
 
 workflow_app = builder.compile()

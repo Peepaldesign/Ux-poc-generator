@@ -66,31 +66,120 @@ async def get_history():
         history.append({"job_id": j_id, "brief": bp})
     return list(reversed(history))
 
-async def run_wireframes(job_id: str):
+def _derive_screen_list(state: WorkflowState) -> list:
+    """Derive screen list from structure phase task_flows + sitemap. Cap to MAX_HIFI_SCREENS."""
+    import os
+    max_screens = int(os.getenv("MAX_HIFI_SCREENS", "5"))
+    screens = []
+    seen = set()
+    
+    # Extract screens from task flows
+    if state.structure.payload and state.structure.payload.flows:
+        for flow in state.structure.payload.flows:
+            for node in flow.nodes:
+                if node.type == "screen" and node.label not in seen:
+                    seen.add(node.label)
+                    screens.append({"ref": node.label, "device": "desktop", "flow": flow.name})
+    
+    # If not enough from flows, pad from sitemap
+    if len(screens) < max_screens and state.structure.payload and state.structure.payload.sitemap:
+        for snode in state.structure.payload.sitemap:
+            if snode.node not in seen:
+                seen.add(snode.node)
+                screens.append({"ref": snode.node, "device": "desktop", "flow": ""})
+    
+    # Infer device from persona context
+    if state.synthesis.payload and state.synthesis.payload.personas:
+        top_persona_ctx = state.synthesis.payload.personas[0].context.lower()
+        if any(w in top_persona_ctx for w in ["mobile", "phone", "on-the-go", "field"]):
+            for s in screens:
+                s["device"] = "mobile"
+    
+    return screens[:max_screens]
+
+async def run_hifi_screen(job_id: str, screen_ref: str, device: str):
     state = jobs_store.get(job_id)
     if not state: return
     
-    state.wireframe.status = "running"
+    # Mark as running
+    from backend.models import AgentResult
+    state.hifi_screens[screen_ref] = AgentResult(status="running")
     jobs_store[job_id] = state
     
     try:
-        from backend.workflow import wireframe_node
-        result_dict = await wireframe_node(state)
-        state.wireframe = result_dict["wireframe"]
+        from backend.workflow import hifi_screen_node
+        result = await hifi_screen_node(state, screen_ref, device)
+        state.hifi_screens[screen_ref] = result
         jobs_store[job_id] = state
     except Exception as e:
-        print(f"Wireframes failed: {e}")
-        state.wireframe.status = "degraded"
-        state.wireframe.error_message = str(e)
+        print(f"Hi-Fi screen {screen_ref} failed: {e}")
+        state.hifi_screens[screen_ref] = AgentResult(
+            status="degraded",
+            error_message=str(e),
+            fallback_instruction="Provide a basic HTML structural layout."
+        )
         jobs_store[job_id] = state
 
-@app.post("/api/generate_wireframes/{job_id}")
-async def generate_wireframes(job_id: str, background_tasks: BackgroundTasks):
+@app.get("/api/hifi/{job_id}/screens")
+async def get_hifi_screens(job_id: str):
+    """Return the derived screen list for this job."""
     if job_id not in jobs_store:
         raise HTTPException(status_code=404, detail="Job not found")
+    return {"screens": _derive_screen_list(jobs_store[job_id])}
+
+@app.post("/api/hifi/{job_id}/{screen_ref}")
+async def generate_hifi_screen(job_id: str, screen_ref: str, background_tasks: BackgroundTasks, device: str = "desktop"):
+    """Generate ONE hi-fi screen on demand."""
+    if job_id not in jobs_store:
+        raise HTTPException(status_code=404, detail="Job not found")
+    state = jobs_store[job_id]
+    if state.design_system.status != "success":
+        raise HTTPException(status_code=400, detail="Design system not ready. Wait for the pipeline to complete.")
     
-    background_tasks.add_task(run_wireframes, job_id)
-    return {"status": "started"}
+    background_tasks.add_task(run_hifi_screen, job_id, screen_ref, device)
+    return {"status": "started", "screen_ref": screen_ref}
+
+@app.post("/api/hifi/{job_id}")
+async def generate_all_hifi_screens(job_id: str, background_tasks: BackgroundTasks):
+    """Generate ALL derived hi-fi screens on demand."""
+    if job_id not in jobs_store:
+        raise HTTPException(status_code=404, detail="Job not found")
+    state = jobs_store[job_id]
+    if state.design_system.status != "success":
+        raise HTTPException(status_code=400, detail="Design system not ready.")
+    
+    screens = _derive_screen_list(state)
+    for s in screens:
+        background_tasks.add_task(run_hifi_screen, job_id, s["ref"], s["device"])
+    return {"status": "started", "count": len(screens)}
+
+@app.get("/api/hifi/{job_id}/{screen_ref}/html")
+async def get_hifi_html(job_id: str, screen_ref: str):
+    """Download a single hi-fi screen as standalone HTML."""
+    if job_id not in jobs_store:
+        raise HTTPException(status_code=404, detail="Job not found")
+    state = jobs_store[job_id]
+    screen_result = state.hifi_screens.get(screen_ref)
+    if not screen_result or screen_result.status != "success" or not screen_result.payload:
+        raise HTTPException(status_code=404, detail="Screen not generated yet")
+    return HTMLResponse(
+        screen_result.payload.html,
+        headers={"Content-Disposition": f"attachment; filename={screen_ref}.html"}
+    )
+
+@app.get("/api/hifi/{job_id}/design-tokens.json")
+async def get_design_tokens_json(job_id: str):
+    """Download design system tokens as JSON."""
+    if job_id not in jobs_store:
+        raise HTTPException(status_code=404, detail="Job not found")
+    state = jobs_store[job_id]
+    if state.design_system.status != "success" or not state.design_system.payload:
+        raise HTTPException(status_code=404, detail="Design system not ready")
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content=state.design_system.payload.model_dump(),
+        headers={"Content-Disposition": f"attachment; filename=design-tokens-{job_id[:8]}.json"}
+    )
 
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str):
@@ -98,11 +187,11 @@ async def get_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     state = jobs_store[job_id]
     
-    # It's done if cancelled, or if structure is finished AND wireframes isn't currently running
-    structure_done = state.structure.status != "pending"
-    wireframe_running = state.wireframe.status == "running"
+    # Pipeline is done when design_system finishes (or earlier if cancelled/degraded)
+    ds_done = state.design_system.status != "pending"
+    any_hifi_running = any(s.status == "running" for s in state.hifi_screens.values())
     
-    is_done = state.cancelled or (structure_done and not wireframe_running)
+    is_done = state.cancelled or (ds_done and not any_hifi_running)
     return {"job_id": job_id, "is_done": is_done, "state": state.model_dump()}
 
 def _build_markdown_report(state: WorkflowState) -> str:
